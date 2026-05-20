@@ -23,6 +23,7 @@ caddy-plus-verify-version 2.11.2
 One-shot usage is also supported:
 
 ```sh
+devenv test
 devenv shell caddy-plus-check
 devenv shell caddy-plus-build
 devenv shell caddy-plus-smoke
@@ -44,11 +45,20 @@ The workflow uses the repository `GITHUB_TOKEN`, so no extra registry secret is 
 
 Build behavior:
 
-- Pull requests and pushes to `main` run validation only.
+- Pull requests and pushes to `main` run validation plus a dry build and smoke test for the latest supported Caddy version.
 - Git tags matching `v*` build and push the full version manifest.
 - Manual `workflow_dispatch` can build the full manifest or a single `caddy_version` from `caddy-versions.txt`.
 - Manual runs default to `push_images=false` for a dry build; opt in to publishing.
 - Published images are pulled from GHCR and smoke-tested after release.
+
+Release checklist:
+
+1. Run `devenv test`.
+2. Run `devenv shell caddy-plus-verify-version <version>` for each changed matrix entry.
+3. Push to `main` and wait for the validation and dry-build jobs to pass.
+4. Create and push a tag matching `v*` to publish the full image set.
+5. In GitHub Packages, make the GHCR package public if consumers should pull without authentication. GitHub Container Registry packages are private on first publish.
+6. Pull the published tag, for example `docker pull ghcr.io/<owner>/<repo>:caddy-2.11.2`.
 
 ## Version and Plugin Matrix
 
@@ -64,3 +74,7 @@ Current plugin mapping:
 | --- | --- | --- |
 | `2.10.0` | `v1.0.29` | `v2.1.0` |
 | `2.11.2` | `v1.0.29` | `v2.5.0` |
+
+## License
+
+Apache-2.0. See [LICENSE](./LICENSE).

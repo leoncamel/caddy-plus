@@ -5,3 +5,8 @@ devenv.local.yaml
 
 # direnv
 .direnv
+
+# Local agent state
+.agents/
+.omx/
+skills-lock.json

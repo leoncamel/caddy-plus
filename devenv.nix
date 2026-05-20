@@ -1,5 +1,22 @@
 { pkgs, ... }:
 
+let
+  projectSource = builtins.path {
+    path = ./.;
+    name = "caddy-plus-source";
+    filter = path: type:
+      let
+        base = baseNameOf path;
+      in
+      !(base == ".git"
+        || base == ".devenv"
+        || base == ".direnv"
+        || base == ".omx"
+        || base == ".agents"
+        || base == "skills-lock.json");
+  };
+in
+
 {
   env.BUILD_PLATFORM = "linux/amd64";
 
@@ -53,7 +70,25 @@
     echo "  caddy-plus-verify-version <version> - verify a Caddy/plugin matrix entry"
   '';
 
-  enterTest = ''
-    caddy-plus-check
-  '';
+  test = pkgs.writeShellScript "caddy-plus-test" ''
+      export PATH=${pkgs.lib.makeBinPath [
+        pkgs.coreutils
+        pkgs.shellcheck
+        pkgs.yq-go
+      ]}:$PATH
+
+      workdir="$(mktemp -d)"
+      trap 'rm -rf "$workdir"' EXIT INT TERM
+      cp -R "${projectSource}/." "$workdir/source"
+      cd "$workdir/source"
+      shellcheck scripts/build-image.sh scripts/smoke-test.sh scripts/verify-version.sh
+      yq eval '.' .github/workflows/build-images.yml >/dev/null
+      awk 'NF && $1 !~ /^#/ && $1 ~ /^v/ { print "Caddy versions must not start with v: " $1; exit 1 }' caddy-versions.txt
+      while IFS= read -r version; do
+        case "$version" in ""|\#*) continue ;; esac
+        test -s "plugin-matrix/$version.txt"
+        awk 'NF && $1 !~ /^#/ && $1 !~ /@/ { print "Plugin entries must pin a version: " $1; exit 1 }' "plugin-matrix/$version.txt"
+      done < caddy-versions.txt
+      echo "local checks passed"
+    '';
 }

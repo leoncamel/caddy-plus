@@ -23,6 +23,7 @@ ARG PLUGIN_SET
 
 LABEL org.opencontainers.image.title="Caddy Plus" \
       org.opencontainers.image.description="Caddy with the Caddy Plus pinned plugin set" \
+      org.opencontainers.image.licenses="Apache-2.0" \
       org.opencontainers.image.version="${CADDY_VERSION}" \
       org.opencontainers.image.caddy.version="${CADDY_VERSION}" \
       org.opencontainers.image.caddy.plugins="${PLUGIN_SET}"

@@ -21,14 +21,16 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 env:
   BUILD_PLATFORM: linux/amd64
+  DRY_BUILD_CADDY_VERSION: 2.11.2
 
 jobs:
   validate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v5
 
@@ -48,10 +50,37 @@ jobs:
             awk 'NF && $1 !~ /^#/ && $1 !~ /@/ { print "Plugin entries must pin a version: " $1; exit 1 }' "plugin-matrix/$version.txt"
           done < caddy-versions.txt
 
+  dry-build:
+    needs: validate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build latest supported image without publishing
+        env:
+          CADDY_VERSION: ${{ env.DRY_BUILD_CADDY_VERSION }}
+          BUILD_CACHE: none
+          PUSH_IMAGE: "false"
+        run: scripts/build-image.sh
+
+      - name: Smoke-test dry build
+        env:
+          CADDY_VERSION: ${{ env.DRY_BUILD_CADDY_VERSION }}
+        run: scripts/smoke-test.sh
+
   build-images:
     needs: validate
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v5
 
@@ -82,6 +111,9 @@ jobs:
     needs: build-images
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.push_images)
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v5
 

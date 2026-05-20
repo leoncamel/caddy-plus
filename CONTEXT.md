@@ -14,7 +14,7 @@ _Avoid_: dynamic tag scan, registry scrape
 
 **Image Publication Target**:
 The registry location where Caddy Plus images are published after a successful build. The default target is GitHub Container Registry for this repository.
-_Avoid_: Docker Hub, GitLab Container Registry
+_Avoid_: Docker Hub, non-GHCR registry
 
 **Official Caddy Base Image**:
 The Docker Hub Caddy image used as the builder and runtime base for Caddy Plus images. Caddy Plus does not use a third-party registry mirror as its canonical base image source.
@@ -74,7 +74,7 @@ Developer: Does each Image Version Tag include arm64 too?
 
 Domain expert: No. The initial Build Platform is linux/amd64.
 
-Developer: Does every merge request publish the whole image matrix?
+Developer: Does every pull request publish the whole image matrix?
 
 Domain expert: No. Publishing happens through a Release Build.
 
