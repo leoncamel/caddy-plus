@@ -6,6 +6,7 @@ PLUGIN_MATRIX_DIR="${PLUGIN_MATRIX_DIR:-plugin-matrix}"
 BUILD_PLATFORM="${BUILD_PLATFORM:-linux/amd64}"
 PUSH_IMAGE="${PUSH_IMAGE:-false}"
 DOCKERFILE="${DOCKERFILE:-Dockerfile}"
+BUILD_CACHE="${BUILD_CACHE:-none}"
 
 if [ -z "${IMAGE_NAME:-}" ] && [ "${GITHUB_REPOSITORY:-}" ]; then
   IMAGE_NAME="ghcr.io/$(printf "%s" "$GITHUB_REPOSITORY" | tr "[:upper:]" "[:lower:]")"
@@ -52,6 +53,21 @@ if [ "$PUSH_IMAGE" = "true" ]; then
   build_mode="--push"
 fi
 
+case "$BUILD_CACHE" in
+  none | "")
+    ;;
+  gha)
+    if [ "$PUSH_IMAGE" != "true" ]; then
+      echo "BUILD_CACHE=gha requires PUSH_IMAGE=true because the gha cache exporter is not supported with the docker --load exporter" >&2
+      exit 1
+    fi
+    ;;
+  *)
+    echo "Unsupported BUILD_CACHE value: $BUILD_CACHE" >&2
+    exit 1
+    ;;
+esac
+
 for version in $versions; do
   case "$version" in
     v*)
@@ -74,7 +90,7 @@ for version in $versions; do
     exit 1
   fi
 
-  docker buildx build \
+  set -- docker buildx build \
     --file "$DOCKERFILE" \
     --platform "$BUILD_PLATFORM" \
     --build-arg "CADDY_VERSION=$version" \
@@ -86,7 +102,13 @@ for version in $versions; do
     --label "org.opencontainers.image.caddy.version=$version" \
     --label "org.opencontainers.image.caddy.plugins=$plugin_set" \
     --tag "$IMAGE_NAME:caddy-$version" \
-    --tag "$IMAGE_NAME:caddy-$version-alpine" \
-    "$build_mode" \
-    .
+    --tag "$IMAGE_NAME:caddy-$version-alpine"
+
+  if [ "$BUILD_CACHE" = "gha" ]; then
+    set -- "$@" --cache-from type=gha --cache-to type=gha,mode=max
+  fi
+
+  set -- "$@" "$build_mode" .
+
+  "$@"
 done

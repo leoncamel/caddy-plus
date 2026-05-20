@@ -19,7 +19,7 @@
   '';
 
   scripts.caddy-plus-check.exec = ''
-    shellcheck scripts/build-image.sh scripts/smoke-test.sh
+    shellcheck scripts/build-image.sh scripts/smoke-test.sh scripts/verify-version.sh
     yq eval '.' .github/workflows/build-images.yml >/dev/null
     awk 'NF && $1 !~ /^#/ && $1 ~ /^v/ { print "Caddy versions must not start with v: " $1; exit 1 }' caddy-versions.txt
     while IFS= read -r version; do
@@ -40,12 +40,17 @@
     scripts/smoke-test.sh "$@"
   '';
 
+  scripts.caddy-plus-verify-version.exec = ''
+    scripts/verify-version.sh "$@"
+  '';
+
   enterShell = ''
     echo "Caddy Plus devenv"
     echo "  caddy-plus-check   - lint local scripts and manifests"
     echo "  caddy-plus-build   - build the local image set without pushing"
     echo "  caddy-plus-modules - list Caddy modules in caddy-plus:caddy-\$CADDY_VERSION"
     echo "  caddy-plus-smoke   - run a local Coraza WAF smoke test"
+    echo "  caddy-plus-verify-version <version> - verify a Caddy/plugin matrix entry"
   '';
 
   enterTest = ''
