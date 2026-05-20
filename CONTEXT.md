@@ -29,8 +29,8 @@ The metadata that identifies what a Caddy Plus image contains, including its Cad
 _Avoid_: undocumented image contents, implicit identity
 
 **Build Platform**:
-The target operating system and CPU architecture for a Caddy Plus image. The initial Build Platform is `linux/amd64` only.
-_Avoid_: multi-arch by default, implicit platform
+The target operating system and CPU architecture for a Caddy Plus image. The current Build Platforms are `linux/amd64` and `linux/arm64`.
+_Avoid_: implicit platform, unsupported platform
 
 **Release Build**:
 A build run that publishes Caddy Plus images to the Image Publication Target. Release Builds are explicit runs, such as release/tag pipelines or manual pipelines, rather than every ordinary source change.
@@ -72,7 +72,7 @@ Domain expert: The Image Identity records the Caddy version and Versioned Plugin
 
 Developer: Does each Image Version Tag include arm64 too?
 
-Domain expert: No. The initial Build Platform is linux/amd64.
+Domain expert: Yes. Each Image Version Tag includes linux/amd64 and linux/arm64 variants, so Apple Silicon Mac mini hosts can run the linux/arm64 image natively.
 
 Developer: Does every pull request publish the whole image matrix?
 

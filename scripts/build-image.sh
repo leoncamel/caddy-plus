@@ -10,8 +10,6 @@ BUILD_CACHE="${BUILD_CACHE:-none}"
 
 if [ -z "${IMAGE_NAME:-}" ] && [ "${GITHUB_REPOSITORY:-}" ]; then
   IMAGE_NAME="ghcr.io/$(printf "%s" "$GITHUB_REPOSITORY" | tr "[:upper:]" "[:lower:]")"
-elif [ -z "${IMAGE_NAME:-}" ] && [ "${CI_REGISTRY_IMAGE:-}" ]; then
-  IMAGE_NAME="$CI_REGISTRY_IMAGE"
 elif [ -z "${IMAGE_NAME:-}" ]; then
   IMAGE_NAME="caddy-plus"
 fi
@@ -41,8 +39,8 @@ if [ -z "$versions" ]; then
   exit 1
 fi
 
-revision="${GITHUB_SHA:-${CI_COMMIT_SHA:-}}"
-source_url="${CI_PROJECT_URL:-}"
+revision="${GITHUB_SHA:-}"
+source_url=""
 
 if [ "${GITHUB_REPOSITORY:-}" ]; then
   source_url="${GITHUB_SERVER_URL:-https://github.com}/$GITHUB_REPOSITORY"
@@ -52,6 +50,15 @@ build_mode="--load"
 if [ "$PUSH_IMAGE" = "true" ]; then
   build_mode="--push"
 fi
+
+case "$BUILD_PLATFORM" in
+  *,*)
+    if [ "$PUSH_IMAGE" != "true" ]; then
+      echo "Multi-platform builds require PUSH_IMAGE=true because docker --load only supports one platform" >&2
+      exit 1
+    fi
+    ;;
+esac
 
 case "$BUILD_CACHE" in
   none | "")

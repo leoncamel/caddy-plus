@@ -33,6 +33,7 @@ devenv shell caddy-plus-verify-version 2.11.2
 ## GitHub Actions
 
 The repository builds images with GitHub Actions on `ubuntu-latest` runners and publishes release builds to GitHub Container Registry.
+Published images support `linux/amd64` and `linux/arm64`; the `linux/arm64` variant is the native Docker platform for Apple Silicon Mac mini hosts.
 
 Images are tagged as:
 
@@ -45,10 +46,10 @@ The workflow uses the repository `GITHUB_TOKEN`, so no extra registry secret is 
 
 Build behavior:
 
-- Pull requests and pushes to `main` run validation plus a dry build and smoke test for the latest supported Caddy version.
-- Git tags matching `v*` build and push the full version manifest.
+- Pull requests and pushes to `main` run validation plus dry builds and smoke tests for the latest supported Caddy version on `linux/amd64` and `linux/arm64`.
+- Git tags matching `v*` build and push the full version manifest as multi-platform images.
 - Manual `workflow_dispatch` can build the full manifest or a single `caddy_version` from `caddy-versions.txt`.
-- Manual runs default to `push_images=false` for a dry build; opt in to publishing.
+- Manual runs default to `push_images=false` for a single-platform `linux/amd64` dry build; opt in to publishing for the full multi-platform image set.
 - Published images are pulled from GHCR and smoke-tested after release.
 
 Release checklist:
@@ -59,6 +60,13 @@ Release checklist:
 4. Create and push a tag matching `v*` to publish the full image set.
 5. In GitHub Packages, make the GHCR package public if consumers should pull without authentication. GitHub Container Registry packages are private on first publish.
 6. Pull the published tag, for example `docker pull ghcr.io/<owner>/<repo>:caddy-2.11.2`.
+
+On Apple Silicon Mac mini hosts, Docker selects the `linux/arm64` variant automatically. To force a local build or smoke test for another platform, set `BUILD_PLATFORM`, for example:
+
+```sh
+BUILD_PLATFORM=linux/arm64 devenv shell caddy-plus-build
+BUILD_PLATFORM=linux/arm64 devenv shell caddy-plus-smoke
+```
 
 ## Version and Plugin Matrix
 

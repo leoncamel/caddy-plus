@@ -1,6 +1,11 @@
 { pkgs, ... }:
 
 let
+  localDockerPlatform =
+    if pkgs.stdenv.hostPlatform.system == "aarch64-darwin"
+    then "linux/arm64"
+    else "linux/amd64";
+
   projectSource = builtins.path {
     path = ./.;
     name = "caddy-plus-source";
@@ -18,7 +23,7 @@ let
 in
 
 {
-  env.BUILD_PLATFORM = "linux/amd64";
+  env.BUILD_PLATFORM = localDockerPlatform;
 
   packages = [
     pkgs.coreutils
@@ -65,8 +70,8 @@ in
     echo "Caddy Plus devenv"
     echo "  caddy-plus-check   - lint local scripts and manifests"
     echo "  caddy-plus-build   - build the local image set without pushing"
-    echo "  caddy-plus-modules - list Caddy modules in caddy-plus:caddy-\$CADDY_VERSION"
-    echo "  caddy-plus-smoke   - run a local Coraza WAF smoke test"
+    echo "  caddy-plus-modules - list Caddy modules in caddy-plus:caddy-\$CADDY_VERSION for $BUILD_PLATFORM"
+    echo "  caddy-plus-smoke   - run a local Coraza WAF smoke test for $BUILD_PLATFORM"
     echo "  caddy-plus-verify-version <version> - verify a Caddy/plugin matrix entry"
   '';
 

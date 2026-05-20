@@ -23,7 +23,7 @@ permissions:
   contents: read
 
 env:
-  BUILD_PLATFORM: linux/amd64
+  RELEASE_PLATFORMS: linux/amd64,linux/arm64
   DRY_BUILD_CADDY_VERSION: 2.11.2
 
 jobs:
@@ -56,6 +56,12 @@ jobs:
     if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
     steps:
       - uses: actions/checkout@v5
 
@@ -64,12 +70,16 @@ jobs:
         run: |
           echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
       - name: Build latest supported image without publishing
         env:
           CADDY_VERSION: ${{ env.DRY_BUILD_CADDY_VERSION }}
+          BUILD_PLATFORM: ${{ matrix.platform }}
           BUILD_CACHE: none
           PUSH_IMAGE: "false"
         run: scripts/build-image.sh
@@ -77,6 +87,7 @@ jobs:
       - name: Smoke-test dry build
         env:
           CADDY_VERSION: ${{ env.DRY_BUILD_CADDY_VERSION }}
+          BUILD_PLATFORM: ${{ matrix.platform }}
         run: scripts/smoke-test.sh
 
   build-images:
@@ -94,6 +105,9 @@ jobs:
         run: |
           echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -108,6 +122,7 @@ jobs:
       - name: Build image set
         env:
           CADDY_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.caddy_version || '' }}
+          BUILD_PLATFORM: ${{ (startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.push_images)) && env.RELEASE_PLATFORMS || 'linux/amd64' }}
           BUILD_CACHE: ${{ (startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.push_images)) && 'gha' || 'none' }}
           PUSH_IMAGE: ${{ (startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.push_images)) && 'true' || 'false' }}
         run: scripts/build-image.sh
@@ -127,6 +142,9 @@ jobs:
         run: |
           echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
       - name: Log in to GHCR
         uses: docker/login-action@v4
         with:
@@ -138,6 +156,8 @@ jobs:
         env:
           SELECTED_CADDY_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.caddy_version || '' }}
         run: |
+          platforms="$(printf "%s" "$RELEASE_PLATFORMS" | tr "," " ")"
+
           if [ -n "$SELECTED_CADDY_VERSION" ]; then
             versions="$SELECTED_CADDY_VERSION"
           else
@@ -145,10 +165,12 @@ jobs:
           fi
 
           for version in $versions; do
-            docker pull "$IMAGE_NAME:caddy-$version"
-            modules="$(docker run --rm --platform "$BUILD_PLATFORM" "$IMAGE_NAME:caddy-$version" caddy list-modules)"
-            printf "%s\n" "$modules" | grep '^dns\.providers\.alidns$'
-            printf "%s\n" "$modules" | grep '^http\.handlers\.waf$'
+            for platform in $platforms; do
+              docker pull --platform "$platform" "$IMAGE_NAME:caddy-$version"
+              modules="$(docker run --rm --platform "$platform" "$IMAGE_NAME:caddy-$version" caddy list-modules)"
+              printf "%s\n" "$modules" | grep '^dns\.providers\.alidns$'
+              printf "%s\n" "$modules" | grep '^http\.handlers\.waf$'
 
-            CADDY_VERSION="$version" scripts/smoke-test.sh
+              BUILD_PLATFORM="$platform" CADDY_VERSION="$version" scripts/smoke-test.sh
+            done
           done
