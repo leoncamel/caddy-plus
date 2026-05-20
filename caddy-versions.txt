@@ -1,0 +1,5 @@
+# Caddy Version Matrix.
+# One Caddy v2 version per line. Each version must have matching official
+# caddy:<version>-builder-alpine and caddy:<version>-alpine images.
+2.10.0
+2.11.2

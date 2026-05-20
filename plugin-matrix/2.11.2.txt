@@ -1,0 +1,4 @@
+# Plugin versions for Caddy 2.11.2.
+# coraza-caddy v2.5.0 requires Caddy v2.11.2 and Go 1.25.
+github.com/caddy-dns/alidns@v1.0.29
+github.com/corazawaf/coraza-caddy/v2@v2.5.0

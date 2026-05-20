@@ -1,0 +1,4 @@
+*
+!Dockerfile
+!plugin-matrix/
+!plugin-matrix/*.txt

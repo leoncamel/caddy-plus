@@ -1,0 +1,14 @@
+{
+	order coraza_waf first
+}
+
+:8080 {
+	coraza_waf {
+		directives `
+		SecRuleEngine On
+		SecRule ARGS:test "@contains attack" "id:1001,phase:2,deny,status:403"
+		`
+	}
+
+	respond "ok"
+}

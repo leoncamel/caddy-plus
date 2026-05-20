@@ -1,0 +1,7 @@
+# Plugin versions for Caddy 2.10.0.
+# alidns v1.0.29 is the latest stable module version currently available.
+# coraza-caddy v2.2.0+ requires Go 1.25, while caddy:2.10.0-builder-alpine
+# uses Go 1.24.x. Keep coraza-caddy at v2.1.0 until the Caddy builder image
+# for this Caddy version can build newer coraza-caddy releases.
+github.com/caddy-dns/alidns@v1.0.29
+github.com/corazawaf/coraza-caddy/v2@v2.1.0
