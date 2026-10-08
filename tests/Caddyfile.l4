@@ -1,0 +1,13 @@
+{
+	layer4 {
+		:9443 {
+			route {
+				echo
+			}
+		}
+	}
+}
+
+:8080 {
+	respond "ok"
+}

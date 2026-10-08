@@ -1,0 +1,6 @@
+# Plugin versions for Caddy 2.10.2.
+# coraza-caddy v2.1.0 is the newest release compatible with Caddy v2.10.x;
+# v2.2.0+ requires Caddy v2.11.2 in its module graph. caddy-l4 v0.1.x
+# requires Caddy v2.11.4+; not available.
+github.com/caddy-dns/alidns@v1.0.29
+github.com/corazawaf/coraza-caddy/v2@v2.1.0

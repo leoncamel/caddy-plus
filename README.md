@@ -17,7 +17,7 @@ caddy-plus-check
 caddy-plus-build
 caddy-plus-modules
 caddy-plus-smoke
-caddy-plus-verify-version 2.11.2
+caddy-plus-verify-version 2.11.7
 ```
 
 One-shot usage is also supported:
@@ -27,7 +27,7 @@ devenv test
 devenv shell caddy-plus-check
 devenv shell caddy-plus-build
 devenv shell caddy-plus-smoke
-devenv shell caddy-plus-verify-version 2.11.2
+devenv shell caddy-plus-verify-version 2.11.7
 ```
 
 ## GitHub Actions
@@ -59,7 +59,7 @@ Release checklist:
 3. Push to `main` and wait for the validation and dry-build jobs to pass.
 4. Create and push a tag matching `v*` to publish the full image set.
 5. In GitHub Packages, make the GHCR package public if consumers should pull without authentication. GitHub Container Registry packages are private on first publish.
-6. Pull the published tag, for example `docker pull ghcr.io/<owner>/<repo>:caddy-2.11.2`.
+6. Pull the published tag, for example `docker pull ghcr.io/<owner>/<repo>:caddy-2.11.7`.
 
 On Apple Silicon Mac mini hosts, Docker selects the `linux/arm64` variant automatically. To force a local build or smoke test for another platform, set `BUILD_PLATFORM`, for example:
 
@@ -78,10 +78,11 @@ Use `caddy-plus-verify-version <version>` before adding or changing a matrix ent
 
 Current plugin mapping:
 
-| Caddy version | alidns | coraza-caddy |
-| --- | --- | --- |
-| `2.10.0` | `v1.0.29` | `v2.1.0` |
-| `2.11.2` | `v1.0.29` | `v2.5.0` |
+| Caddy version | alidns | coraza-caddy | caddy-l4 |
+| --- | --- | --- | --- |
+| `2.10.2` | `v1.0.29` | `v2.2.0` | — |
+| `2.11.2` | `v1.0.29` | `v2.5.0` | — |
+| `2.11.7` | `v1.0.29` | `v2.6.2` | `v0.1.2` |
 
 ## License
 

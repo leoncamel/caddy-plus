@@ -1,0 +1,6 @@
+# Plugin versions for Caddy 2.11.7.
+# caddy-l4 v0.1.2 requires Caddy v2.11.4 and Go 1.25.1.
+# coraza-caddy v2.6.2 requires Caddy v2.11.4 and Go 1.26.0.
+github.com/caddy-dns/alidns@v1.0.29
+github.com/corazawaf/coraza-caddy/v2@v2.6.2
+github.com/mholt/caddy-l4@v0.1.2

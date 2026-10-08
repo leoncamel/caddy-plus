@@ -24,7 +24,7 @@ permissions:
 
 env:
   RELEASE_PLATFORMS: linux/amd64,linux/arm64
-  DRY_BUILD_CADDY_VERSION: 2.11.2
+  DRY_BUILD_CADDY_VERSION: 2.11.7
 
 jobs:
   validate:
