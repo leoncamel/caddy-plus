@@ -25,7 +25,7 @@ permissions:
 env:
   RELEASE_PLATFORMS: linux/amd64,linux/arm64
   DRY_BUILD_CADDY_VERSION: 2.11.7
-  ACR_REPOSITORY: registry.cn-beijing.aliyuncs.com/zhangxl/hello
+  ACR_REPOSITORY: registry.cn-beijing.aliyuncs.com/zhangxl/caddy-plus
 
 jobs:
   validate:

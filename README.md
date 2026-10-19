@@ -40,8 +40,8 @@ Images are tagged as:
 ```text
 ghcr.io/<owner>/<repo>:caddy-<version>
 ghcr.io/<owner>/<repo>:caddy-<version>-alpine
-registry.cn-beijing.aliyuncs.com/zhangxl/hello:caddy-<version>
-registry.cn-beijing.aliyuncs.com/zhangxl/hello:caddy-<version>-alpine
+registry.cn-beijing.aliyuncs.com/zhangxl/caddy-plus:caddy-<version>
+registry.cn-beijing.aliyuncs.com/zhangxl/caddy-plus:caddy-<version>-alpine
 ```
 
 The workflow uses the repository `GITHUB_TOKEN` for GHCR, so no extra secret is required there. The workflow needs `packages: write`, which is declared in the workflow file. Aliyun ACR publishing uses the repository secrets `ACR_USERNAME` and `ACR_PASSWORD`; the ACR repository is configured by `ACR_REPOSITORY` at the top of the workflow.
@@ -62,7 +62,7 @@ Release checklist:
 4. Push to `main` and wait for the validation and dry-build jobs to pass.
 5. Create and push a tag matching `v*` to publish the full image set to GHCR and Aliyun ACR.
 6. In GitHub Packages, make the GHCR package public if consumers should pull without authentication. GitHub Container Registry packages are private on first publish.
-7. Pull the published tag, for example `docker pull ghcr.io/<owner>/<repo>:caddy-2.11.7` or `docker pull registry.cn-beijing.aliyuncs.com/zhangxl/hello:caddy-2.11.7`.
+7. Pull the published tag, for example `docker pull ghcr.io/<owner>/<repo>:caddy-2.11.7` or `docker pull registry.cn-beijing.aliyuncs.com/zhangxl/caddy-plus:caddy-2.11.7`.
 
 On Apple Silicon Mac mini hosts, Docker selects the `linux/arm64` variant automatically. To force a local build or smoke test for another platform, set `BUILD_PLATFORM`, for example:
 
