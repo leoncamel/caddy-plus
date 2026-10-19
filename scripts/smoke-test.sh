@@ -11,12 +11,40 @@ L4_HOST_PORT="${L4_HOST_PORT:-8081}"
 SMOKE_L4_CADDYFILE="${SMOKE_L4_CADDYFILE:-tests/Caddyfile.l4}"
 
 image_tag="$IMAGE_NAME:caddy-$CADDY_VERSION"
+tmp_binary="$(mktemp "${TMPDIR:-/tmp}/caddy-plus-smoke.XXXXXX")"
+container_id=""
 
 cleanup() {
   docker rm -f "$CONTAINER_NAME" "${CONTAINER_NAME}-l4" >/dev/null 2>&1 || true
+  if [ -n "$container_id" ]; then
+    docker rm -f "$container_id" >/dev/null 2>&1 || true
+  fi
+  rm -f "$tmp_binary"
 }
 
 trap cleanup EXIT INT TERM
+
+# BuildKit runs the builder on the host platform. Verify the copied Caddy
+# binary is built for the requested runtime platform, not the build host.
+assert_image_arch() {
+  case "$BUILD_PLATFORM" in
+    linux/amd64) expected=3e00 ;;
+    linux/arm64) expected=b700 ;;
+    *) return 0 ;;
+  esac
+
+  container_id="$(docker create --platform "$BUILD_PLATFORM" "$image_tag")"
+  docker cp "$container_id:/usr/bin/caddy" "$tmp_binary" >/dev/null 2>&1
+  docker rm "$container_id" >/dev/null
+
+  machine="$(od -An -tx1 -j18 -N2 "$tmp_binary" | tr -d ' \n')"
+  if [ "$machine" != "$expected" ]; then
+    echo "Image architecture mismatch for $BUILD_PLATFORM: caddy ELF machine is $machine" >&2
+    exit 1
+  fi
+}
+
+assert_image_arch
 
 docker run --rm --platform "$BUILD_PLATFORM" \
   -v "$PWD/$SMOKE_CADDYFILE:/etc/caddy/Caddyfile:ro" \

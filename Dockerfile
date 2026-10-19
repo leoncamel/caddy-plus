@@ -5,15 +5,21 @@ ARG CADDY_VERSION
 FROM --platform=$BUILDPLATFORM caddy:${CADDY_VERSION}-builder-alpine AS builder
 
 ARG CADDY_VERSION
+ARG TARGETOS
+ARG TARGETARCH
 
 ARG PLUGIN_MANIFEST
 
 COPY ${PLUGIN_MANIFEST} /tmp/plugin-manifest.txt
 
+# The builder runs on BUILDPLATFORM; cross-compile for the target platform.
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     set -eu; \
     plugins="$(awk 'NF && $1 !~ /^#/ { printf " --with %s", $1 }' /tmp/plugin-manifest.txt)"; \
+    if [ -n "${TARGETARCH:-}" ]; then \
+      export CGO_ENABLED=0 GOOS="${TARGETOS:-linux}" GOARCH="${TARGETARCH}"; \
+    fi; \
     xcaddy build "v${CADDY_VERSION}" ${plugins}
 
 FROM caddy:${CADDY_VERSION}-alpine

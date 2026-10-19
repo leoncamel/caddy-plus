@@ -7,6 +7,7 @@ BUILD_PLATFORM="${BUILD_PLATFORM:-linux/amd64}"
 PUSH_IMAGE="${PUSH_IMAGE:-false}"
 DOCKERFILE="${DOCKERFILE:-Dockerfile}"
 BUILD_CACHE="${BUILD_CACHE:-none}"
+ACR_IMAGE_NAME="${ACR_IMAGE_NAME:-}"
 
 if [ -z "${IMAGE_NAME:-}" ] && [ "${GITHUB_REPOSITORY:-}" ]; then
   IMAGE_NAME="ghcr.io/$(printf "%s" "$GITHUB_REPOSITORY" | tr "[:upper:]" "[:lower:]")"
@@ -110,6 +111,12 @@ for version in $versions; do
     --label "org.opencontainers.image.caddy.plugins=$plugin_set" \
     --tag "$IMAGE_NAME:caddy-$version" \
     --tag "$IMAGE_NAME:caddy-$version-alpine"
+
+  if [ -n "$ACR_IMAGE_NAME" ]; then
+    set -- "$@" \
+      --tag "$ACR_IMAGE_NAME:caddy-$version" \
+      --tag "$ACR_IMAGE_NAME:caddy-$version-alpine"
+  fi
 
   if [ "$BUILD_CACHE" = "gha" ]; then
     set -- "$@" --cache-from type=gha --cache-to type=gha,mode=max

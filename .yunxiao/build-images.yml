@@ -1,0 +1,237 @@
+# Aliyun Yunxiao Flow pipeline.
+#
+# Create a "YAML 化编排" pipeline in Flow and paste this file. Replace the
+# service connection placeholder before validation. Release runs need the
+# private variables GHCR_USERNAME and GHCR_TOKEN with GHCR package write access.
+#
+# The pipeline mirrors .github/workflows/build-images.yml:
+#   validate -> dry build + smoke test -> release (tag or PUSH_IMAGES=true)
+#
+# The public Beijing cluster starts a Docker daemon for jobs that need one.
+# Buildx is installed on demand; arm64 release builds use QEMU binfmt.
+
+name: caddy-plus-images
+
+sources:
+  caddy_plus:
+    type: codeup
+    name: caddy-plus
+    endpoint: https://leoncamel-cn-beijing.devops.aliyuncs.com/codeup/github/caddy-plus.git
+    branch: main
+    triggerEvents:
+      - push
+      - tagPush
+      - mergeRequestOpenedOrUpdate
+      - mergeRequestMerged
+    certificate:
+      type: serviceConnection
+      serviceConnection: <CODEUP_SERVICE_CONNECTION_ID>
+
+defaultWorkspace: caddy_plus
+
+variables:
+  - key: IMAGE_NAME
+    value: ghcr.io/leoncamel/caddy-plus
+  - key: RELEASE_PLATFORMS
+    value: linux/amd64,linux/arm64
+  - key: DRY_BUILD_CADDY_VERSION
+    value: "2.11.7"
+  - key: BUILD_CADDY_VERSION
+    value: ""
+  - key: PUSH_IMAGES
+    value: "false"
+
+stages:
+  validate:
+    name: Validate
+    jobs:
+      validate:
+        name: Validate scripts and manifests
+        runsOn:
+          group: public/cn-beijing
+          container: build-steps-public-registry.cn-beijing.cr.aliyuncs.com/build-steps/alinux3:latest
+          instanceType: LARGE_4C8G
+        enableDockerDaemon: true
+        timeoutMinutes: 30
+        steps:
+          check:
+            step: Command
+            name: Run repository checks
+            with:
+              run: |
+                set -eu
+
+                docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:stable \
+                  scripts/build-image.sh scripts/smoke-test.sh scripts/verify-version.sh
+
+                test -s caddy-versions.txt
+                awk 'NF && $1 !~ /^#/ && $1 ~ /^v/ { print "Caddy versions must not start with v: " $1; exit 1 }' caddy-versions.txt
+
+                while IFS= read -r version; do
+                  case "$version" in ""|\#*) continue ;; esac
+                  test -s "plugin-matrix/$version.txt"
+                  awk 'NF && $1 !~ /^#/ && $1 !~ /@/ { print "Plugin entries must pin a version: " $1; exit 1 }' "plugin-matrix/$version.txt"
+                done < caddy-versions.txt
+
+                echo "repository checks passed"
+
+  dry_build:
+    name: Dry build
+    jobs:
+      dry_build:
+        name: Build and smoke-test latest Caddy on amd64
+        needs: validate
+        runsOn:
+          group: public/cn-beijing
+          container: build-steps-public-registry.cn-beijing.cr.aliyuncs.com/build-steps/alinux3:latest
+          instanceType: LARGE_4C8G
+        enableDockerDaemon: true
+        timeoutMinutes: 60
+        steps:
+          setup:
+            step: Command
+            name: Set up Docker tools
+            with:
+              run: |
+                set -eu
+
+                if ! docker buildx version >/dev/null 2>&1; then
+                  dnf install -y docker-buildx-plugin || {
+                    mkdir -p /usr/libexec/docker/cli-plugins
+                    curl -fsSL https://github.com/docker/buildx/releases/download/v0.17.1/buildx-v0.17.1.linux-amd64 \
+                      -o /usr/libexec/docker/cli-plugins/docker-buildx
+                    chmod +x /usr/libexec/docker/cli-plugins/docker-buildx
+                  }
+                fi
+
+                if ! command -v nc >/dev/null 2>&1; then
+                  dnf install -y nmap-ncat || dnf install -y nc
+                fi
+
+                docker buildx create --name caddy-plus --driver docker-container --use 2>/dev/null \
+                  || docker buildx use caddy-plus
+                docker buildx inspect --bootstrap >/dev/null
+
+          build:
+            step: Command
+            name: Build image without publishing
+            with:
+              variables:
+                - key: CADDY_VERSION
+                  value: ${DRY_BUILD_CADDY_VERSION}
+                - key: BUILD_PLATFORM
+                  value: linux/amd64
+                - key: BUILD_CACHE
+                  value: none
+                - key: PUSH_IMAGE
+                  value: "false"
+              run: scripts/build-image.sh
+
+          smoke:
+            step: Command
+            name: Smoke-test image
+            with:
+              variables:
+                - key: CADDY_VERSION
+                  value: ${DRY_BUILD_CADDY_VERSION}
+                - key: BUILD_PLATFORM
+                  value: linux/amd64
+              run: scripts/smoke-test.sh
+
+  release:
+    name: Release
+    jobs:
+      release:
+        name: Publish GHCR images
+        needs: validate
+        condition: |
+          startsWith("${CI_COMMIT_REF_NAME}", "v") || "${PUSH_IMAGES}" == "true"
+        runsOn:
+          group: public/cn-beijing
+          container: build-steps-public-registry.cn-beijing.cr.aliyuncs.com/build-steps/alinux3:latest
+          instanceType: XLARGE_8C16G
+        enableDockerDaemon: true
+        timeoutMinutes: 360
+        steps:
+          setup:
+            step: Command
+            name: Set up multi-platform Docker tools
+            with:
+              run: |
+                set -eu
+
+                if ! docker buildx version >/dev/null 2>&1; then
+                  dnf install -y docker-buildx-plugin || {
+                    mkdir -p /usr/libexec/docker/cli-plugins
+                    curl -fsSL https://github.com/docker/buildx/releases/download/v0.17.1/buildx-v0.17.1.linux-amd64 \
+                      -o /usr/libexec/docker/cli-plugins/docker-buildx
+                    chmod +x /usr/libexec/docker/cli-plugins/docker-buildx
+                  }
+                fi
+
+                if ! command -v nc >/dev/null 2>&1; then
+                  dnf install -y nmap-ncat || dnf install -y nc
+                fi
+
+                if [ ! -e /proc/sys/fs/binfmt_misc/qemu-aarch64 ]; then
+                  docker run --privileged --rm tonistiigi/binfmt:latest --install arm64
+                fi
+
+                docker buildx create --name caddy-plus --driver docker-container --use 2>/dev/null \
+                  || docker buildx use caddy-plus
+                docker buildx inspect --bootstrap >/dev/null
+
+          login:
+            step: Command
+            name: Log in to GHCR
+            with:
+              run: |
+                set -e
+                if [ -z "$GHCR_USERNAME" ] || [ -z "$GHCR_TOKEN" ]; then
+                  echo "Set GHCR_USERNAME and GHCR_TOKEN as private pipeline variables" >&2
+                  exit 1
+                fi
+                printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+
+          build:
+            step: Command
+            name: Build and push image set
+            with:
+              variables:
+                - key: CADDY_VERSION
+                  value: ${BUILD_CADDY_VERSION}
+                - key: BUILD_PLATFORM
+                  value: ${RELEASE_PLATFORMS}
+                - key: BUILD_CACHE
+                  value: none
+                - key: PUSH_IMAGE
+                  value: "true"
+              run: scripts/build-image.sh
+
+          verify:
+            step: Command
+            name: Verify published images
+            with:
+              run: |
+                set -e
+
+                platforms="$(printf "%s" "$RELEASE_PLATFORMS" | tr "," " ")"
+
+                if [ -n "$BUILD_CADDY_VERSION" ]; then
+                  versions="$BUILD_CADDY_VERSION"
+                else
+                  versions="$(awk 'NF && $1 !~ /^#/ { print $1 }' caddy-versions.txt)"
+                fi
+
+                for version in $versions; do
+                  for platform in $platforms; do
+                    docker pull --platform "$platform" "$IMAGE_NAME:caddy-$version"
+
+                    modules="$(docker run --rm --platform "$platform" "$IMAGE_NAME:caddy-$version" caddy list-modules)"
+                    printf "%s\n" "$modules" | grep '^dns\.providers\.alidns$'
+                    printf "%s\n" "$modules" | grep '^http\.handlers\.waf$'
+
+                    BUILD_PLATFORM="$platform" CADDY_VERSION="$version" \
+                      IMAGE_NAME="$IMAGE_NAME" scripts/smoke-test.sh
+                  done
+                done

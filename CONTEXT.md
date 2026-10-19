@@ -13,8 +13,8 @@ The repository-owned list that defines which Caddy versions belong to the Caddy 
 _Avoid_: dynamic tag scan, registry scrape
 
 **Image Publication Target**:
-The registry location where Caddy Plus images are published after a successful build. The default target is GitHub Container Registry for this repository.
-_Avoid_: Docker Hub, non-GHCR registry
+The registry location where Caddy Plus images are published after a successful build. The primary target is GitHub Container Registry; release builds also mirror the same tags to Aliyun ACR.
+_Avoid_: Docker Hub, replacing GHCR as the primary target
 
 **Official Caddy Base Image**:
 The Docker Hub Caddy image used as the builder and runtime base for Caddy Plus images. Caddy Plus does not use a third-party registry mirror as its canonical base image source.

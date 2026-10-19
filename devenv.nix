@@ -43,6 +43,7 @@ in
   scripts.caddy-plus-check.exec = ''
     shellcheck scripts/build-image.sh scripts/smoke-test.sh scripts/verify-version.sh
     yq eval '.' .github/workflows/build-images.yml >/dev/null
+    yq eval '.' .yunxiao/build-images.yml >/dev/null
     awk 'NF && $1 !~ /^#/ && $1 ~ /^v/ { print "Caddy versions must not start with v: " $1; exit 1 }' caddy-versions.txt
     while IFS= read -r version; do
       case "$version" in ""|\#*) continue ;; esac
@@ -88,6 +89,7 @@ in
       cd "$workdir/source"
       shellcheck scripts/build-image.sh scripts/smoke-test.sh scripts/verify-version.sh
       yq eval '.' .github/workflows/build-images.yml >/dev/null
+      yq eval '.' .yunxiao/build-images.yml >/dev/null
       awk 'NF && $1 !~ /^#/ && $1 ~ /^v/ { print "Caddy versions must not start with v: " $1; exit 1 }' caddy-versions.txt
       while IFS= read -r version; do
         case "$version" in ""|\#*) continue ;; esac
