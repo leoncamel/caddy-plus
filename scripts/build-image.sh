@@ -99,6 +99,8 @@ for version in $versions; do
   fi
 
   set -- docker buildx build \
+    --provenance=false \
+    --sbom=false \
     --file "$DOCKERFILE" \
     --platform "$BUILD_PLATFORM" \
     --build-arg "CADDY_VERSION=$version" \
