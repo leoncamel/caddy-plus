@@ -6,6 +6,9 @@ devenv.local.yaml
 # direnv
 .direnv
 
+# Local secrets
+.env.local
+
 # Local agent state
 .agents/
 .omx/
