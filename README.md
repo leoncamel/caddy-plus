@@ -46,6 +46,8 @@ registry.cn-beijing.aliyuncs.com/zhangxl/caddy-plus:caddy-<version>-alpine
 
 The workflow uses the repository `GITHUB_TOKEN` for GHCR, so no extra secret is required there. The workflow needs `packages: write`, which is declared in the workflow file. Aliyun ACR publishing uses the repository secrets `ACR_USERNAME` and `ACR_PASSWORD`; the ACR repository is configured by `ACR_REPOSITORY` at the top of the workflow.
 
+GHCR images keep BuildKit provenance attestations. The ACR copy is built separately with provenance and SBOM disabled, because ACR rejects the empty OCI manifest used by attestations. Both builds reuse the same Buildx builder and GHA cache.
+
 Build behavior:
 
 - Pull requests and pushes to `main` run validation plus dry builds and smoke tests for the latest supported Caddy version on `linux/amd64` and `linux/arm64`.

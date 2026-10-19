@@ -101,11 +101,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Set image name
-        shell: bash
-        run: |
-          echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
 
@@ -128,13 +123,30 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      - name: Build image set
+      - name: Build and push GHCR images
         env:
           CADDY_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.caddy_version || '' }}
           BUILD_PLATFORM: ${{ (startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.push_images)) && env.RELEASE_PLATFORMS || 'linux/amd64' }}
           BUILD_CACHE: ${{ (startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.push_images)) && 'gha' || 'none' }}
           PUSH_IMAGE: ${{ (startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.push_images)) && 'true' || 'false' }}
-          ACR_IMAGE_NAME: ${{ (startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.push_images)) && env.ACR_REPOSITORY || '' }}
+          ACR_IMAGE_NAME: ""
+          PROVENANCE: "true"
+          SBOM: "false"
+        run: |
+          export IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY,,}"
+          scripts/build-image.sh
+
+      - name: Build and push Aliyun ACR images
+        if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.push_images)
+        env:
+          CADDY_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.caddy_version || '' }}
+          BUILD_PLATFORM: ${{ env.RELEASE_PLATFORMS }}
+          BUILD_CACHE: gha
+          PUSH_IMAGE: "true"
+          ACR_IMAGE_NAME: ""
+          IMAGE_NAME: ${{ env.ACR_REPOSITORY }}
+          PROVENANCE: "false"
+          SBOM: "false"
         run: scripts/build-image.sh
 
   verify-published:

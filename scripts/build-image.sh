@@ -8,6 +8,8 @@ PUSH_IMAGE="${PUSH_IMAGE:-false}"
 DOCKERFILE="${DOCKERFILE:-Dockerfile}"
 BUILD_CACHE="${BUILD_CACHE:-none}"
 ACR_IMAGE_NAME="${ACR_IMAGE_NAME:-}"
+PROVENANCE="${PROVENANCE:-true}"
+SBOM="${SBOM:-false}"
 
 if [ -z "${IMAGE_NAME:-}" ] && [ "${GITHUB_REPOSITORY:-}" ]; then
   IMAGE_NAME="ghcr.io/$(printf "%s" "$GITHUB_REPOSITORY" | tr "[:upper:]" "[:lower:]")"
@@ -99,8 +101,8 @@ for version in $versions; do
   fi
 
   set -- docker buildx build \
-    --provenance=false \
-    --sbom=false \
+    --provenance="$PROVENANCE" \
+    --sbom="$SBOM" \
     --file "$DOCKERFILE" \
     --platform "$BUILD_PLATFORM" \
     --build-arg "CADDY_VERSION=$version" \
